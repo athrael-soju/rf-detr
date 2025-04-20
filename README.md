@@ -7,6 +7,8 @@ This project provides a pipeline for running real-time object detection on video
 - Supports GPU acceleration (CUDA, MPS) and CPU fallback
 - Configurable input/output paths, FPS, and video segment selection
 - Uses COCO class labels for object annotation
+- Optional BLIP-2 AI-powered entity descriptions (instead of COCO labels)
+- Detailed logging with timing and performance metrics
 
 ## Installation
 
@@ -27,6 +29,11 @@ This project provides a pipeline for running real-time object detection on video
    ```bash
    pip install git+https://github.com/roboflow/rf-detr.git
    ```
+   
+   For BLIP-2 support, additional dependencies are required:
+   ```bash
+   pip install transformers torch Pillow
+   ```
 
 3. **Download a pre-trained checkpoint:**
    Place the `rf-detr-base.pth` checkpoint in the project root if you want to use a custom checkpoint. By default, the model will use the built-in COCO checkpoint.
@@ -40,6 +47,7 @@ This project provides a pipeline for running real-time object detection on video
 - `logs/` — Log files (if any)
 - `requirements.txt` — Python dependencies
 - `rf_detr_runner.py` — Contains the RF-DETR model instantiation and the callback function for frame annotation
+- `blip2_describer.py` — Module for generating AI descriptions for detected entities using BLIP-2
 
 ## Usage
 
@@ -62,10 +70,19 @@ from rf_detr_runner import rf_detr_callback
 - `--start` — Start time in seconds (default: 0)
 - `--input` — Input video path (default: `./input/shinjuku.mp4`)
 - `--output` — Output video path (default: `./output/video.mp4`)
+- `--blip2` — Use BLIP-2 to generate descriptions for each detected entity
+- `--detection-threshold` — Detection confidence threshold (default: 0.5)
+- `--prompt` — Custom prompt for BLIP-2 description (default: "Describe this object:")
+- `--log-level` — Set logging level [DEBUG, INFO, WARNING, ERROR] (default: INFO)
 
 Example:
 ```bash
 python main.py --input ./input/tokyo_15min.mp4 --output ./output/annotated_tokyo.mp4 --fps 10 --seconds 60 --start 30
+```
+
+To use AI-powered descriptions instead of COCO class labels:
+```bash
+python main.py --input ./input/shinjuku.mp4 --output ./output/video_with_descriptions.mp4 --blip2
 ```
 
 ## Model & References
@@ -77,6 +94,8 @@ python main.py --input ./input/tokyo_15min.mp4 --output ./output/annotated_tokyo
 - The script will automatically use GPU (CUDA or Apple MPS) if available, otherwise it will run on CPU.
 - The COCO class labels are used for annotation.
 - For best performance, use a machine with a compatible GPU.
+- BLIP-2 processing can be slow, especially on CPU. Use `--fps` to reduce the number of frames to process.
+- Detailed logs are provided for timing and performance metrics during processing.
 
 ## License
 This project is for research and educational purposes. The RF-DETR model and weights are released under the Apache 2.0 license by Roboflow. 
