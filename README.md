@@ -33,12 +33,13 @@ This project provides a pipeline for running real-time object detection on video
 
 ## Directory Structure
 
-- `main.py` — Main script for video processing
+- `main.py` — Main script for video processing (imports detection logic from `rf_detr_runner.py`)
 - `check_gpu.py` — Utility to check GPU availability
 - `input/` — Place your input video files here (e.g., `shinjuku.mp4`, `tokyo_15min.mp4`)
 - `output/` — Processed/annotated videos will be saved here (e.g., `video.mp4`)
 - `logs/` — Log files (if any)
 - `requirements.txt` — Python dependencies
+- `rf_detr_runner.py` — Contains the RF-DETR model instantiation and the callback function for frame annotation
 
 ## Usage
 
@@ -46,6 +47,13 @@ Run the main script from the command line:
 
 ```bash
 python main.py --input ./input/shinjuku.mp4 --output ./output/video.mp4
+```
+
+The detection and annotation logic is now modularized in `rf_detr_runner.py`. If you want to use the detection callback or model in other scripts, simply import from `rf_detr_runner.py`:
+
+```python
+from rf_detr_runner import rf_detr_callback
+# or import the model directly if needed
 ```
 
 ### Optional Arguments
