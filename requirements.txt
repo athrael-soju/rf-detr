@@ -1,2 +1,31 @@
-supervision
-rfdetr 
+supervision>=0.18.0
+rfdetr>=0.0.9
+torch>=2.0.0
+transformers>=4.36.0
+pillow>=10.0.0
+numpy>=1.24.0
+onnx>=1.15.0
+protobuf>=4.25.0
+# Core dependencies
+filelock>=3.18.0
+matplotlib>=3.10.0
+opencv-python>=4.10.0
+pycocotools>=2.0.0
+safetensors>=0.5.0
+# Required for rfdetr
+pandas>=2.0.0
+timm>=1.0.0
+einops>=0.8.0
+pydantic>=2.0.0
+accelerate>=1.4.0
+peft>=0.15.0
+# Skipping problematic packages on macOS Apple Silicon with Python 3.12
+# onnxsim
+# onnx_graphsurgeon
+# polygraphy
+# ninja
+# cython
+# fairscale
+# open_clip_torch
+# pylabel
+# rf100vl 

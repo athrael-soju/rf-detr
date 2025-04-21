@@ -1,101 +1,108 @@
-# RF-DETR Video Object Detection Pipeline
+# RF-DETR with BLIP-2 for Object Detection and Description
 
-This project provides a pipeline for running real-time object detection on videos using the [RF-DETR](https://github.com/roboflow/rf-detr) (Roboflow Detection Transformer) model. It leverages the `rfdetr` and `supervision` Python packages to annotate videos with detected objects and save the results.
+This project combines RF-DETR (Roboflow's DETR implementation) for object detection with BLIP-2 for generating natural language descriptions of the detected objects in videos.
 
 ## Features
-- Processes video files and annotates detected objects frame-by-frame
-- Supports GPU acceleration (CUDA, MPS) and CPU fallback
-- Configurable input/output paths, FPS, and video segment selection
-- Uses COCO class labels for object annotation
-- Optional BLIP-2 AI-powered entity descriptions (instead of COCO labels)
-- Detailed logging with timing and performance metrics
+
+- Object detection using RF-DETR models
+- Natural language description of detected objects using BLIP-2
+- Support for video processing with customizable parameters
+- Optimized for Apple Silicon (MPS acceleration)
+
+## System Requirements
+
+- Python 3.9+ (Python 3.12 is supported)
+- macOS (optimized for Apple Silicon, but will work on Intel Macs too)
+- 16GB+ RAM recommended for BLIP-2 model
 
 ## Installation
 
-1. **Clone this repository** (if applicable):
-   ```bash
-   git clone https://github.com/athrael-soju/rf-detr
-   cd rf-detr
-   ```
+### 1. Create a virtual environment
 
-2. **Install dependencies:**
-   Ensure you have Python 3.9 or newer. Install required packages:
-   ```bash
-   pip install -r requirements.txt
-   # Or install manually:
-   pip install rfdetr supervision
-   ```
-   The `rfdetr` package is available on PyPI. For the latest features, you can also install from source:
-   ```bash
-   pip install git+https://github.com/roboflow/rf-detr.git
-   ```
-   
-   For BLIP-2 support, additional dependencies are required:
-   ```bash
-   pip install transformers torch Pillow
-   ```
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
 
-3. **Download a pre-trained checkpoint:**
-   Place the `rf-detr-base.pth` checkpoint in the project root if you want to use a custom checkpoint. By default, the model will use the built-in COCO checkpoint.
+### 2. Install dependencies
 
-## Directory Structure
+```bash
+pip install -r requirements.txt
+```
 
-- `main.py` — Main script for video processing (imports detection logic from `rf_detr_runner.py`)
-- `check_gpu.py` — Utility to check GPU availability
-- `input/` — Place your input video files here (e.g., `shinjuku.mp4`, `tokyo_15min.mp4`)
-- `output/` — Processed/annotated videos will be saved here (e.g., `video.mp4`)
-- `logs/` — Log files (if any)
-- `requirements.txt` — Python dependencies
-- `rf_detr_runner.py` — Contains the RF-DETR model instantiation and the callback function for frame annotation
-- `blip2_describer.py` — Module for generating AI descriptions for detected entities using BLIP-2
+Note: Some dependencies that cause issues on macOS with Apple Silicon are commented out in the requirements.txt file. The project works without them, but you might see warnings related to unsupported features.
+
+### 3. Verify installation
+
+Run the verification script to ensure all required dependencies are installed:
+
+```bash
+python verify_setup.py
+```
 
 ## Usage
 
-Run the main script from the command line:
+### Basic usage
 
 ```bash
-python main.py --input ./input/shinjuku.mp4 --output ./output/video.mp4
+python main.py --input your_video.mp4 --output output.mp4
 ```
 
-The detection and annotation logic is now modularized in `rf_detr_runner.py`. If you want to use the detection callback or model in other scripts, simply import from `rf_detr_runner.py`:
+### Enable BLIP-2 descriptions
 
-```python
-from rf_detr_runner import rf_detr_callback
-# or import the model directly if needed
-```
-
-### Optional Arguments
-- `--fps` — Target FPS to process (default: original video FPS)
-- `--seconds` — How many seconds of video to process (default: all)
-- `--start` — Start time in seconds (default: 0)
-- `--input` — Input video path (default: `./input/shinjuku.mp4`)
-- `--output` — Output video path (default: `./output/video.mp4`)
-- `--blip2` — Use BLIP-2 to generate descriptions for each detected entity
-- `--detection-threshold` — Detection confidence threshold (default: 0.5)
-- `--prompt` — Custom prompt for BLIP-2 description (default: "Describe this object:")
-- `--log-level` — Set logging level [DEBUG, INFO, WARNING, ERROR] (default: INFO)
-
-Example:
 ```bash
-python main.py --input ./input/tokyo_15min.mp4 --output ./output/annotated_tokyo.mp4 --fps 10 --seconds 60 --start 30
+python main.py --input your_video.mp4 --output output.mp4 --blip2
 ```
 
-To use AI-powered descriptions instead of COCO class labels:
+### Full options
+
 ```bash
-python main.py --input ./input/shinjuku.mp4 --output ./output/video_with_descriptions.mp4 --blip2
+python main.py \
+  --input your_video.mp4 \
+  --output output.mp4 \
+  --blip2 \
+  --prompt "Describe this object:" \
+  --detection-threshold 0.5 \
+  --fps 10 \
+  --seconds 60 \
+  --start 30 \
+  --log-level INFO
 ```
 
-## Model & References
-- [RF-DETR GitHub](https://github.com/roboflow/rf-detr)
-- [Roboflow Blog: RF-DETR](https://blog.roboflow.com/rf-detr/)
-- [supervision Python package](https://github.com/roboflow/supervision)
+## Parameters
 
-## Notes
-- The script will automatically use GPU (CUDA or Apple MPS) if available, otherwise it will run on CPU.
-- The COCO class labels are used for annotation.
-- For best performance, use a machine with a compatible GPU.
-- BLIP-2 processing can be slow, especially on CPU. Use `--fps` to reduce the number of frames to process.
-- Detailed logs are provided for timing and performance metrics during processing.
+- `--input`: Input video path (default: ./input/shinjuku.mp4)
+- `--output`: Output video path (default: ./output/video.mp4)
+- `--blip2`: Enable BLIP-2 descriptions for detected objects
+- `--prompt`: Prompt for BLIP-2 (default: "Describe this object:")
+- `--detection-threshold`: Detection confidence threshold (default: 0.5)
+- `--fps`: Target FPS to process (default: original video FPS)
+- `--seconds`: How many seconds of video to process (default: all)
+- `--start`: Start time in seconds (default: 0)
+- `--log-level`: Set logging level (DEBUG, INFO, WARNING, ERROR)
+
+## Troubleshooting
+
+### Installation issues on macOS Apple Silicon
+
+If you encounter issues with some dependencies like `onnxsim` or `onnx_graphsurgeon`, they can be safely skipped for most use cases.
+
+### Memory issues with BLIP-2
+
+The BLIP-2 model requires a significant amount of memory. If you experience out-of-memory errors:
+
+1. Reduce the input video resolution 
+2. Process fewer frames by setting a lower `--fps` value
+3. Consider disabling BLIP-2 with high-resolution videos
+
+### GPU Acceleration
+
+- On Apple Silicon Macs, the code automatically uses MPS (Metal Performance Shaders) for acceleration
+- On systems with NVIDIA GPUs, CUDA will be used automatically if available
 
 ## License
-This project is for research and educational purposes. The RF-DETR model and weights are released under the Apache 2.0 license by Roboflow. 
+
+This project uses components from:
+- RF-DETR: Apache License 2.0
+- BLIP-2: BSD 3-Clause License
+- Supervision: Apache License 2.0 
