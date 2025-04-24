@@ -9,7 +9,7 @@ This project provides a pipeline for running real-time object detection on video
 - Uses COCO class labels for object annotation
 - Optional BLIP-2 AI-powered entity descriptions (instead of COCO labels)
 - Detailed logging with timing and performance metrics
-- **NEW: Dataset generation with entity tracking across frames**
+- **NEW: Entity tracking across video frames with delta generation**
 - **NEW: Advanced dataset visualizations and analytics**
 
 ## Installation
@@ -50,8 +50,9 @@ This project provides a pipeline for running real-time object detection on video
 - `requirements.txt` — Python dependencies
 - `rf_detr_runner.py` — Contains the RF-DETR model instantiation and the callback function for frame annotation
 - `blip2_describer.py` — Module for generating AI descriptions for detected entities using BLIP-2
-- `dataset_generator.py` — NEW: Module for tracking entities across frames and generating structured datasets
-- `visualize_dataset.py` — NEW: Tool for generating visualizations from the entity tracking dataset
+- `video_entity_tracker.py` — Module for tracking entities across video frames, generating spatial relationships and computing deltas
+- `dataset_generator.py` — Compatibility layer (deprecated, use video_entity_tracker.py instead)
+- `visualize_dataset.py` — Tool for generating visualizations from the entity tracking dataset
 
 ## Usage
 
@@ -78,10 +79,10 @@ from rf_detr_runner import rf_detr_callback
 - `--detection-threshold` — Detection confidence threshold (default: 0.5)
 - `--prompt` — Custom prompt for BLIP-2 description (default: "Describe this object:")
 - `--log-level` — Set logging level [DEBUG, INFO, WARNING, ERROR] (default: INFO)
-- `--generate-dataset` — NEW: Generate a structured dataset with entity tracking
-- `--dataset-output` — NEW: Path to save the generated dataset (default: auto-generated path in output directory)
-- `--environment` — NEW: Environment label for the dataset (default: "unknown")
-- `--iou-threshold` — NEW: IoU threshold for entity tracking between frames (default: 0.5)
+- `--generate-dataset` — Generate a structured dataset with entity tracking
+- `--dataset-output` — Path to save the generated dataset (default: auto-generated path in output directory)
+- `--environment` — Environment label for the dataset (default: "unknown")
+- `--iou-threshold` — IoU threshold for entity tracking between frames (default: 0.5)
 
 Example:
 ```bash
@@ -93,14 +94,42 @@ To use AI-powered descriptions instead of COCO class labels:
 python main.py --input ./input/shinjuku.mp4 --output ./output/video_with_descriptions.mp4 --blip2
 ```
 
-## Dataset Generation
+## Entity Tracking and Dataset Generation
 
-The new dataset generation capability creates structured JSON datasets from processed videos, with entity tracking between frames. This is ideal for:
+The project includes a robust system for tracking entities across video frames, computing deltas between frames, and generating spatial relationships. 
 
-- Creating training data for computer vision models
-- Analyzing object movement and relationships in videos
-- Building knowledge graphs of visual scenes
-- Creating annotated time series data
+### VideoEntityTracker
+
+The `VideoEntityTracker` class in `video_entity_tracker.py` provides:
+
+1. Entity tracking across video frames using IoU-based matching
+2. Delta generation to identify new, updated, and removed entities
+3. Spatial relationship inference between entities in each frame
+4. JSON dataset generation with complete tracking information
+
+### Using VideoEntityTracker
+
+```python
+from video_entity_tracker import VideoEntityTracker
+
+# Initialize tracker
+tracker = VideoEntityTracker(iou_threshold=0.5, environment="street")
+
+# Process video frames
+for frame_id, detections, descriptions in video_frames:
+    frame_data = tracker.process_frame(frame_id, detections, descriptions)
+
+# Save dataset to JSON
+tracker.save_dataset("output/tracking_data.json")
+```
+
+For legacy code, the old `EntityTracker` class is still available via a compatibility layer:
+
+```python
+from dataset_generator import EntityTracker  # Will show deprecation warning
+
+tracker = EntityTracker()  # This is actually using VideoEntityTracker
+```
 
 ### Dataset Structure
 
