@@ -6,6 +6,9 @@ import torch
 import time
 from rf_detr_runner import rf_detr_callback
 import blip2_describer  # Import entire module instead of individual components
+from dataset_generator import EntityTracker
+import os
+import datetime
 
 def main():
     start_time = time.time()
@@ -25,12 +28,16 @@ def main():
     parser.add_argument('--fps', type=float, default=None, help='Target FPS to process (default: original video FPS)')
     parser.add_argument('--seconds', type=float, default=None, help='How many seconds of video to process (default: all)')
     parser.add_argument('--start', type=float, default=0, help='Start time in seconds (default: 0)')
-    parser.add_argument('--input', type=str, default='./input/shinjuku.mp4', help='Input video path')
+    parser.add_argument('--input', type=str, default='./input/nyc.mp4', help='Input video path')
     parser.add_argument('--output', type=str, default='./output/video.mp4', help='Output video path')
     parser.add_argument('--blip2', action='store_true', help='Use BLIP-2 to generate descriptions for each detected entity')
     parser.add_argument('--detection-threshold', type=float, default=0.5, help='Detection confidence threshold (default: 0.5)')
     parser.add_argument('--prompt', type=str, default="Describe this object:", help='Prompt for BLIP-2 description')
     parser.add_argument('--log-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'], default='INFO', help='Set logging level')
+    parser.add_argument('--environment', type=str, default="unknown", help='Environment label for the dataset (e.g., home, office, street)')
+    parser.add_argument('--dataset-output', type=str, default=None, help='Output path for the JSON dataset')
+    parser.add_argument('--iou-threshold', type=float, default=0.5, help='IoU threshold for tracking (default: 0.5)')
+    parser.add_argument('--generate-dataset', action='store_true', help='Generate a dataset from the processed video')
     args = parser.parse_args()
 
     # Set up logging
@@ -51,6 +58,8 @@ def main():
     if args.blip2:
         logging.info(f"  Using BLIP-2 for entity description")
         logging.info(f"  BLIP-2 Prompt: '{args.prompt}'")
+    if args.generate_dataset:
+        logging.info(f"  Generating dataset with environment: '{args.environment}'")
     
     # Preload BLIP-2 model if needed
     if args.blip2:
@@ -101,6 +110,20 @@ def main():
         total_frames=None
     )
 
+    # Initialize entity tracker if dataset generation is enabled
+    if args.generate_dataset:
+        entity_tracker = EntityTracker(
+            iou_threshold=args.iou_threshold,
+            environment=args.environment
+        )
+        
+        # Setup default dataset output path if not provided
+        if args.dataset_output is None:
+            input_filename = os.path.splitext(os.path.basename(args.input))[0]
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            args.dataset_output = f"./output/{input_filename}_{timestamp}_dataset.json"
+            logging.info(f"Using default dataset output path: {args.dataset_output}")
+
     frames_generator = sv.get_video_frames_generator(
         source_path=args.input,
         stride=stride,
@@ -113,6 +136,7 @@ def main():
     detection_time = 0
     description_time = 0
     annotation_time = 0
+    dataset_generation_time = 0
     
     with sv.VideoSink(target_path=args.output, video_info=output_video_info) as sink:
         for idx, frame in enumerate(frames_generator):
@@ -120,6 +144,11 @@ def main():
                 break
                 
             frame_start_time = time.time()
+            frame_id = start_frame + (idx * stride)
+            
+            # Generate timestamp for this frame
+            seconds_from_start = idx * stride / video_info.fps
+            timestamp = (datetime.datetime.now() - datetime.timedelta(seconds=seconds_from_start)).isoformat()
             
             # Run detection
             detection_start = time.time()
@@ -156,6 +185,36 @@ def main():
                     f"{COCO_CLASSES[class_id]} {confidence:.2f}"
                     for class_id, confidence in zip(detections.class_id, detections.confidence)
                 ]
+                
+            # Generate dataset if enabled
+            if args.generate_dataset:
+                dataset_start_time = time.time()
+                
+                # Get clean descriptions without confidence values if using BLIP2
+                if args.blip2 and blip2_available:
+                    clean_descriptions = labels
+                else:
+                    # Strip confidence values from COCO labels
+                    clean_descriptions = [
+                        COCO_CLASSES[class_id]
+                        for class_id in detections.class_id
+                    ]
+                
+                # Process frame for dataset
+                frame_data = entity_tracker.process_frame(
+                    frame_id=frame_id,
+                    detections=detections,
+                    descriptions=clean_descriptions,
+                    timestamp=timestamp
+                )
+                
+                dataset_generation_time += time.time() - dataset_start_time
+                
+                if idx % 10 == 0:
+                    logging.info(f"Generated dataset entry for frame {idx} with {len(frame_data['entities'])} entities")
+                    logging.info(f"  New: {len(frame_data['delta']['new_entities'])}, " + 
+                               f"Updated: {len(frame_data['delta']['updated_entities'])}, " +
+                               f"Removed: {len(frame_data['delta']['removed_entities'])}")
             
             # Annotate frame and write to output
             annotation_start = time.time()
@@ -208,6 +267,13 @@ def main():
                            f"Found {len(detections.xyxy)} entities - " +
                            f"Frame time: {frame_time:.2f}s")
     
+    # Save dataset if enabled
+    if args.generate_dataset:
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(args.dataset_output), exist_ok=True)
+        entity_tracker.save_dataset(args.dataset_output)
+        logging.info(f"Dataset saved to {args.dataset_output}")
+    
     # Log summary statistics
     total_time = time.time() - start_time
     avg_time_per_frame = total_time / total_frames_processed if total_frames_processed > 0 else 0
@@ -219,9 +285,14 @@ def main():
     logging.info(f"Total entities detected: {total_entities_detected}")
     logging.info(f"Average entities per frame: {avg_entities_per_frame:.2f}")
     logging.info(f"Average time per frame: {avg_time_per_frame:.2f}s")
-    logging.info(f"Time breakdown - Detection: {detection_time:.2f}s, " +
-               f"Description: {description_time:.2f}s, " +
-               f"Annotation: {annotation_time:.2f}s")
+    time_breakdown = f"Time breakdown - Detection: {detection_time:.2f}s, " + \
+                    f"Description: {description_time:.2f}s, " + \
+                    f"Annotation: {annotation_time:.2f}s"
+    
+    if args.generate_dataset:
+        time_breakdown += f", Dataset Generation: {dataset_generation_time:.2f}s"
+    
+    logging.info(time_breakdown)
 
 if __name__ == "__main__":
     main()
