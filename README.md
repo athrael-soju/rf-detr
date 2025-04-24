@@ -9,8 +9,6 @@ This project provides a pipeline for running real-time object detection on video
 - Uses COCO class labels for object annotation
 - Optional BLIP-2 AI-powered entity descriptions (instead of COCO labels)
 - Detailed logging with timing and performance metrics
-- **NEW: Dataset generation with entity tracking across frames**
-- **NEW: Advanced dataset visualizations and analytics**
 
 ## Installation
 
@@ -50,8 +48,6 @@ This project provides a pipeline for running real-time object detection on video
 - `requirements.txt` — Python dependencies
 - `rf_detr_runner.py` — Contains the RF-DETR model instantiation and the callback function for frame annotation
 - `blip2_describer.py` — Module for generating AI descriptions for detected entities using BLIP-2
-- `dataset_generator.py` — NEW: Module for tracking entities across frames and generating structured datasets
-- `visualize_dataset.py` — NEW: Tool for generating visualizations from the entity tracking dataset
 
 ## Usage
 
@@ -78,10 +74,6 @@ from rf_detr_runner import rf_detr_callback
 - `--detection-threshold` — Detection confidence threshold (default: 0.5)
 - `--prompt` — Custom prompt for BLIP-2 description (default: "Describe this object:")
 - `--log-level` — Set logging level [DEBUG, INFO, WARNING, ERROR] (default: INFO)
-- `--generate-dataset` — NEW: Generate a structured dataset with entity tracking
-- `--dataset-output` — NEW: Path to save the generated dataset (default: auto-generated path in output directory)
-- `--environment` — NEW: Environment label for the dataset (default: "unknown")
-- `--iou-threshold` — NEW: IoU threshold for entity tracking between frames (default: 0.5)
 
 Example:
 ```bash
@@ -93,96 +85,10 @@ To use AI-powered descriptions instead of COCO class labels:
 python main.py --input ./input/shinjuku.mp4 --output ./output/video_with_descriptions.mp4 --blip2
 ```
 
-## Dataset Generation
-
-The new dataset generation capability creates structured JSON datasets from processed videos, with entity tracking between frames. This is ideal for:
-
-- Creating training data for computer vision models
-- Analyzing object movement and relationships in videos
-- Building knowledge graphs of visual scenes
-- Creating annotated time series data
-
-### Dataset Structure
-
-The generated dataset is a JSON array containing frame-by-frame data:
-
-```json
-[
-  {
-    "frame_id": 1,
-    "timestamp": "2024-08-24T09:00:00Z",
-    "environment": "street",
-    "entities": [
-      {
-        "entity_id": "person_0",
-        "type": "person",
-        "bbox": [100, 200, 300, 400],
-        "confidence": 0.97,
-        "description": "Woman in a red coat walking"
-      },
-      ...
-    ],
-    "relationships": [
-      { "subject": "person_0", "predicate": "next_to", "object": "car_2" },
-      ...
-    ],
-    "delta": {
-      "new_entities": ["person_0", "car_2"],
-      "updated_entities": [],
-      "removed_entities": []
-    },
-    "previous_frame_id": null
-  },
-  ...
-]
-```
-
-### Key Features
-
-- **Entity Tracking**: Each entity gets a consistent ID across frames
-- **Delta Information**: Track which entities are new, updated, or removed between frames
-- **Spatial Relationships**: Automatically infers relationships between entities (next_to, contains, etc.)
-- **Rich Descriptions**: Optional AI-generated descriptions using BLIP-2
-
-### Dataset Generation
-
-To generate a dataset with specific parameters:
-
-```bash
-python main.py --input ./input/street_scene.mp4 --output ./output/annotated.mp4 --generate-dataset --dataset-output ./output/street_data.json --environment street --blip2 --fps 5 --seconds 30
-```
-
-## Dataset Visualization
-
-The project includes tools to visualize and analyze the entity tracking datasets. These visualizations help understand how entities move and interact throughout a video.
-
-### Visualization Types
-
-- **Entity Timeline**: Shows which entities are present in each frame
-- **Entity Changes**: Visualizes new, updated, and removed entities between frames
-- **Relationship Graphs**: Network graphs showing entity relationships for selected frames
-- **Movement Animation**: Animated visualization of entity movement across frames
-- **Entity Statistics**: Charts and statistics about entity types, lifespans, and relationships
-
-### Generating Visualizations
-
-Use the visualization tool with a generated dataset:
-
-```bash
-python visualize_dataset.py --dataset ./output/street_data.json --output-dir ./output/visualizations --all
-```
-
-You can also generate specific visualizations:
-
-```bash
-python visualize_dataset.py --dataset ./output/street_data.json --timeline --changes --statistics
-```
-
 ## Model & References
 - [RF-DETR GitHub](https://github.com/roboflow/rf-detr)
 - [Roboflow Blog: RF-DETR](https://blog.roboflow.com/rf-detr/)
 - [supervision Python package](https://github.com/roboflow/supervision)
-- [BLIP-2 on Hugging Face](https://huggingface.co/Salesforce/blip2-opt-2.7b)
 
 ## Notes
 - The script will automatically use GPU (CUDA or Apple MPS) if available, otherwise it will run on CPU.
@@ -190,8 +96,6 @@ python visualize_dataset.py --dataset ./output/street_data.json --timeline --cha
 - For best performance, use a machine with a compatible GPU.
 - BLIP-2 processing can be slow, especially on CPU. Use `--fps` to reduce the number of frames to process.
 - Detailed logs are provided for timing and performance metrics during processing.
-- The entity tracking uses IoU (Intersection over Union) to match entities between frames.
-- Visualizations require matplotlib, networkx, and pandas packages.
 
 ## License
 This project is for research and educational purposes. The RF-DETR model and weights are released under the Apache 2.0 license by Roboflow. 
