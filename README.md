@@ -1,4 +1,4 @@
-# RF-DETR Video Object Detection Pipeline
+# Qdrant, Neo4j, RF-DETR Video Object Detection Pipeline
 
 This project provides a pipeline for running real-time object detection on videos using the [RF-DETR](https://github.com/roboflow/rf-detr) (Roboflow Detection Transformer) model. It leverages the `rfdetr` and `supervision` Python packages to annotate videos with detected objects and save the results.
 
